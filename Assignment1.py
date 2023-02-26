@@ -15,9 +15,9 @@ def getImage(filename):
 
 # shows two images with custom labels
 def imageComparison(left, leftLabel, right, rightLabel):
-    plt.subplot(121),plt.imshow(left, cmap="gray"),plt.title(leftLabel)
+    plt.subplot(121),plt.imshow(left),plt.title(leftLabel)
     plt.xticks([]), plt.yticks([])
-    plt.subplot(122),plt.imshow(right, cmap="gray"),plt.title(rightLabel)
+    plt.subplot(122),plt.imshow(right),plt.title(rightLabel)
     plt.xticks([]), plt.yticks([])
     plt.show()
 
@@ -123,8 +123,8 @@ def customBoxFilter(image):
     return np.asarray(blur)
 
 # ----------------------------------- Gaussian Filters------------------------------------------------ #
-def cvGaussianFilter(image):
-    return cv.GaussianBlur(image, (15,15), 0)
+def cvGaussianFilter(image, size=15):
+    return cv.GaussianBlur(image, (size,size), 0)
 
 def customGaussianFilter(image, kernelSize):
     
@@ -148,7 +148,52 @@ def customGaussianFilter(image, kernelSize):
         return kernel_2D
 
     kernel = gaussian_kernel(kernelSize, sigma=math.sqrt(kernelSize))
-    return convolution(image, kernel)
+
+    def GaussianSquare(arr, kernel):
+        sum = 0
+        for i in range(kernel.shape[0]):
+            for j in range(kernel.shape[0]):
+                sum += arr[i][j][0]*kernel[i][j]
+        return sum // (kernel.shape[0] ** 2)
+    
+    # Setup the Kernel, blur, and indicies
+    currSquare = []
+    currSquare_row = []
+
+    blur_row = []
+    blur = []
+
+    rows = len(image)
+    cols = len(image[0])
+
+    row, col = 0, 0
+
+    while row <= rows - kernelSize:
+        while col <= cols - kernelSize:
+
+            for i in range(row, row + kernelSize):
+
+                for j in range(col, col + kernelSize):
+
+                    currSquare_row.append(image[i][j])
+
+                currSquare.append(np.asarray(currSquare_row))
+                currSquare_row = []
+
+            avg = GaussianSquare(currSquare, kernel)
+            blur_row.append(np.asarray([avg, avg, avg]))
+            currSquare = []
+
+            col += 1
+        
+        blur.append(np.asarray(blur_row))
+        blur_row = []
+
+        row += 1
+        col = 0
+    
+    return np.asarray(blur)
+    # return convolution(image, kernel)
 
 # ----------------------------------- Motion Blur ------------------------------------------------ #
 # Generate the Motion Kernel
@@ -210,10 +255,13 @@ def customMotionFilter(image, size):
     
     return np.asarray(blur)
 
+# ----------------------------------- Laplace Sharpening ------------------------------------------------ #
+def cvLaplaceFilter(image):
+    print()
 image = getImage('lena_gray.bmp')
 
 Boxing = False
-Gausing = False #come back to this later, image on write darker than it should be, looks fine otherwise
+Gausing = True #come back to this later, image on write darker than it should be, looks fine otherwise
 Motion = False
 Laplace = False
 CannyE = False
