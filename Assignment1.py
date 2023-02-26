@@ -126,35 +126,30 @@ def customBoxFilter(image):
 def cvGaussianFilter(image, size=15):
     return cv.GaussianBlur(image, (size,size), 0)
 
-def customGaussianFilter(image, kernelSize):
+def customGaussianFilter(image, kernelSize):  
     
-    def dnorm(x, mu, sd):
-        return 1 / (np.sqrt(2 * np.pi) * sd) * np.e ** (-np.power((x - mu) / sd, 2) / 2)
-    
-    
-    def gaussian_kernel(size, sigma=1, verbose=False):
-        kernel_1D = np.linspace(-(size // 2), size // 2, size)
-        for i in range(size):
-            kernel_1D[i] = dnorm(kernel_1D[i], 0, sigma)
+    def gaussian_kernel():
+        kernel_1D = np.array([0.00048872837522002, 0.002403157286908872, 0.009246250740395456,
+                    0.027839605612666265, 0.06560233156931679, 0.12099884565428047,
+                    0.1746973469158936, 0.19744746769063704, 0.1746973469158936,
+                    0.12099884565428047, 0.06560233156931679, 0.027839605612666265,
+                    0.009246250740395456, 0.002403157286908872, 0.00048872837522002 ]) # taken from the kernel generator
+        print(sum(kernel_1D))
+
         kernel_2D = np.outer(kernel_1D.T, kernel_1D.T)
     
         kernel_2D *= 1.0 / kernel_2D.max()
     
-        if verbose:
-            plt.imshow(kernel_2D, interpolation='none', cmap='gray')
-            plt.title("Kernel ( {}X{} )".format(size, size))
-            plt.show()
-    
         return kernel_2D
 
-    kernel = gaussian_kernel(kernelSize, sigma=math.sqrt(kernelSize))
+    kernel = gaussian_kernel()
 
     def GaussianSquare(arr, kernel):
         sum = 0
         for i in range(kernel.shape[0]):
             for j in range(kernel.shape[0]):
                 sum += arr[i][j][0]*kernel[i][j]
-        return sum // (kernel.shape[0] ** 2)
+        return sum // (kernel.shape[0] ** 2 - 200)
     
     # Setup the Kernel, blur, and indicies
     currSquare = []
