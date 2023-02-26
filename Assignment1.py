@@ -185,12 +185,12 @@ def customMotionFilter(image, size):
 
     row, col = 0, 0
 
-    while row <= rows - 7:
-        while col <= cols - 7:
+    while row <= rows - size:
+        while col <= cols - size:
 
-            for i in range(row, row + 7):
+            for i in range(row, row + size):
 
-                for j in range(col, col + 7):
+                for j in range(col, col + size):
 
                     currSquare_row.append(image[i][j])
 
