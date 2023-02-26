@@ -21,53 +21,6 @@ def imageComparison(left, leftLabel, right, rightLabel):
     plt.xticks([]), plt.yticks([])
     plt.show()
 
-def convolution(image, kernel, verbose=False):
-    if len(image.shape) == 3:
-        print("Found 3 Channels : {}".format(image.shape))
-        image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-        print("Converted to Gray Channel. Size : {}".format(image.shape))
-    else:
-        print("Image Shape : {}".format(image.shape))
- 
-    print("Kernel Shape : {}".format(kernel.shape))
- 
-    if verbose:
-        plt.imshow(image, cmap='gray')
-        plt.title("Image")
-        plt.show()
- 
-    image_row, image_col = image.shape
-    kernel_row, kernel_col = kernel.shape
- 
-    output = np.zeros(image.shape)
- 
-    pad_height = int((kernel_row - 1) / 2)
-    pad_width = int((kernel_col - 1) / 2)
- 
-    padded_image = np.zeros((image_row + (2 * pad_height), image_col + (2 * pad_width)))
- 
-    padded_image[pad_height:padded_image.shape[0] - pad_height, pad_width:padded_image.shape[1] - pad_width] = image
- 
-    if verbose:
-        plt.imshow(padded_image, cmap='gray')
-        plt.title("Padded Image")
-        plt.show()
- 
-    for row in range(image_row):
-        for col in range(image_col):
-            output[row, col] = np.sum(kernel * padded_image[row:row + kernel_row, col:col + kernel_col])
-            output[row, col] /= kernel.shape[0] * kernel.shape[1]
-
-    if verbose:
-        plt.imshow(output, cmap='gray')
-        plt.title("Output Image using {}X{} Kernel".format(kernel_row, kernel_col))
-        plt.show()
-
-    
-    
-
-    return output
-
 # ----------------------------------- Box Filters ------------------------------------------------ #
 # Creates OpenCV Example 7x7 Box Blur
 def cvBoxFilter(image):
@@ -128,13 +81,15 @@ def cvGaussianFilter(image, size=15):
 
 def customGaussianFilter(image, kernelSize):  
     
-    def gaussian_kernel():
-        kernel_1D = np.array([0.00048872837522002, 0.002403157286908872, 0.009246250740395456,
-                    0.027839605612666265, 0.06560233156931679, 0.12099884565428047,
-                    0.1746973469158936, 0.19744746769063704, 0.1746973469158936,
-                    0.12099884565428047, 0.06560233156931679, 0.027839605612666265,
-                    0.009246250740395456, 0.002403157286908872, 0.00048872837522002 ]) # taken from the kernel generator
-        print(sum(kernel_1D))
+    def gaussian_kernel(size):
+        if size == 15:
+            kernel_1D = np.array([0.00048872837522002, 0.002403157286908872, 0.009246250740395456,
+                        0.027839605612666265, 0.06560233156931679, 0.12099884565428047,
+                        0.1746973469158936, 0.19744746769063704, 0.1746973469158936,
+                        0.12099884565428047, 0.06560233156931679, 0.027839605612666265,
+                        0.009246250740395456, 0.002403157286908872, 0.00048872837522002 ]) # taken from the kernel generator
+        else:
+            kernel_1D = np.array([0.31946576033846985, 0.3610684793230603, 0.31946576033846985]) # taken from the kernel generator
 
         kernel_2D = np.outer(kernel_1D.T, kernel_1D.T)
     
@@ -142,7 +97,7 @@ def customGaussianFilter(image, kernelSize):
     
         return kernel_2D
 
-    kernel = gaussian_kernel()
+    kernel = gaussian_kernel(kernelSize)
 
     def GaussianSquare(arr, kernel):
         sum = 0
@@ -251,12 +206,74 @@ def customMotionFilter(image, size):
     return np.asarray(blur)
 
 # ----------------------------------- Laplace Sharpening ------------------------------------------------ #
+def generateLaplaceKernel(size):
+    zerosAnd2 = np.zeros((size, size))
+    zerosAnd2[1][1] = 2
+    OnesOver9 = np.ones((size,size))/9
+    kernel = zerosAnd2 - OnesOver9
+    return kernel
+
 def cvLaplaceFilter(image):
-    print()
+    return image
+
+def customLaplaceFilter(image, size):
+    kernel = generateLaplaceKernel(size)
+    # Determine the avg of the current kernel
+    def laplaceSquare(arr, kernel):
+        sum = 0
+        for i in range(kernel.shape[0]):
+            for j in range(kernel.shape[0]):
+                pp = arr[i][j][0]*kernel[i][j] #pixel product
+                sum += pp
+        return sum
+    
+    # Setup the Kernel, blur, and indicies
+    currSquare = []
+    currSquare_row = []
+
+    blur_row = []
+    blur = []
+
+    rows = len(image)
+    cols = len(image[0])
+
+    row, col = 0, 0
+
+    while row <= rows - size:
+        while col <= cols - size:
+
+            for i in range(row, row + size):
+
+                for j in range(col, col + size):
+
+                    currSquare_row.append(image[i][j])
+
+                currSquare.append(np.asarray(currSquare_row))
+                currSquare_row = []
+
+            avg = laplaceSquare(currSquare, kernel)
+            blur_row.append(np.asarray([avg, avg, avg]))
+            currSquare = []
+
+            col += 1
+        
+        blur.append(np.asarray(blur_row))
+        blur_row = []
+
+        row += 1
+        col = 0
+    
+    return np.asarray(blur)
+
+# ----------------------------------- Canny Edge Detection ------------------------------------------------ #
+
+
+
+# ----------------------------------- Driver Code ------------------------------------------------ #
 image = getImage('lena_gray.bmp')
 
 Boxing = False
-Gausing = True #come back to this later, image on write darker than it should be, looks fine otherwise
+Gausing = False
 Motion = False
 Laplace = False
 CannyE = False
@@ -274,7 +291,7 @@ if Gausing:
     # Creating reference and custom 15x15 Gaussian blurs
     cvGaussianBlur = cvGaussianFilter(image)
     customGaussianBlur = customGaussianFilter(image, 15)
-    imageComparison(cvGaussianBlur, "CV Box Filter", customGaussianBlur, "Custom Box Filter")
+    imageComparison(cvGaussianBlur, "CV Gauss Filter", customGaussianBlur, "Custom Gauss Filter")
     # Saving blured images into separate folders
     cv.imwrite('../CS4391.001 Assignment 1/OpenCV_Output/cvGaussianBlur.jpg', cvGaussianBlur)
     cv.imwrite('../CS4391.001 Assignment 1/Custom_Output/customGaussianBlur.jpg', customGaussianBlur)
@@ -291,8 +308,8 @@ if Motion:
 if Laplace:
     # Creating reference and custom 3x3 Laplace Sharps
     cvLaplaceSharpening = cvLaplaceFilter(image)
-    customLaplaceSharpening = customLaplaceFilter(image)
-    imageComparison(cvLaplaceSharpening, "CV Box Filter", customLaplaceSharpening, "Custom Box Filter")
+    customLaplaceSharpening = customLaplaceFilter(image, 3)
+    imageComparison(cvLaplaceSharpening, "CV Laplace Filter", customLaplaceSharpening, "Custom Laplace Filter")
     # Saving blured images into separate folders
     cv.imwrite('../CS4391.001 Assignment 1/OpenCV_Output/cvLaplaceSharpening.jpg', cvLaplaceSharpening)
     cv.imwrite('../CS4391.001 Assignment 1/Custom_Output/customLaplaceSharpening.jpg', customLaplaceSharpening)
@@ -301,7 +318,7 @@ if CannyE:
     # Creating reference and custom Edge Detectors
     cvCannyEdge = cvCannyEdgeFilter(image)
     customCannyEdge = customCannyEdgeFilter(image)
-    imageComparison(cvCannyEdge, "CV Box Filter", customCannyEdge, "Custom Box Filter")
+    imageComparison(cvCannyEdge, "CV Canny Edge Filter", customCannyEdge, "Custom Canny Edge Filter")
     # Saving blured images into separate folders
     cv.imwrite('../CS4391.001 Assignment 1/OpenCV_Output/cvCannyEdge.jpg', cvCannyEdge)
     cv.imwrite('../CS4391.001 Assignment 1/Custom_Output/customCannyEdge.jpg', customCannyEdge)
