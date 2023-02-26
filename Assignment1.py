@@ -165,13 +165,12 @@ def cvMotionFilter(image, kernel):
 def customMotionFilter(image, size):
     kernel = generateMotionKernel(size)
     # Determine the avg of the current kernel
-    def avgSquare(arr, kernel):
-
+    def motionSquare(arr, kernel):
         sum = 0
-        for i in range(7):
-            for j in range(7):
-                sum += arr[i][j][0]
-        return sum // kernel.shape[0]
+        for i in range(kernel.shape[0]):
+            for j in range(kernel.shape[0]):
+                sum += arr[i][j][0]*kernel[i][j]
+        return sum
     
     # Setup the Kernel, blur, and indicies
     currSquare = []
@@ -197,7 +196,7 @@ def customMotionFilter(image, size):
                 currSquare.append(np.asarray(currSquare_row))
                 currSquare_row = []
 
-            avg = avgSquare(currSquare)
+            avg = motionSquare(currSquare, kernel)
             blur_row.append(np.asarray([avg, avg, avg]))
             currSquare = []
 
@@ -239,9 +238,9 @@ if Gausing:
     
 if Motion:
     # Creating reference and custom 15x15 Motion blurs
-    cvMotionBlur = cvMotionFilter(image)
-    customMotionBlur = customMotionFilter(image)
-    imageComparison(cvMotionBlur, "CV Box Filter", customMotionBlur, "Custom Box Filter")
+    cvMotionBlur = cvMotionFilter(image, generateMotionKernel(15))
+    customMotionBlur = customMotionFilter(image, 15)
+    # imageComparison(cvMotionBlur, "CV Box Filter", customMotionBlur, "Custom Box Filter") # for some reason this doesn't work, maybe because of the grey scale I have but meh
     # Saving blured images into separate folders
     cv.imwrite('../CS4391.001 Assignment 1/OpenCV_Output/cvMotionBlur.jpg', cvMotionBlur)
     cv.imwrite('../CS4391.001 Assignment 1/Custom_Output/customMotionBlur.jpg', customMotionBlur)
