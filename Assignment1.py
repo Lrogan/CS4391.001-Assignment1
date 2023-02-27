@@ -345,11 +345,12 @@ def customCannyEdgeFilter(image, size):
 # ----------------------------------- Driver Code ------------------------------------------------ #
 image = getImage('lena_gray.bmp')
 
+# you must change these to true for them to run
 Boxing = False
 Gausing = False
 Motion = False
 Laplace = False
-CannyE = True
+CannyE = False
 
 if Boxing:
     # Creating reference and custom 7x7 box blurs
