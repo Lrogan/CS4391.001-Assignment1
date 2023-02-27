@@ -266,7 +266,80 @@ def customLaplaceFilter(image, size):
     return np.asarray(blur)
 
 # ----------------------------------- Canny Edge Detection ------------------------------------------------ #
+def cvCannyEdgeFilter(image, val, size):
+    low_threshold = val
+    img_blur = cv.blur(image, (size,size))
+    detected_edges = cv.Canny(img_blur, low_threshold, low_threshold*size, size)
+    mask = detected_edges != 0
+    dst = image * (mask[:,:,None].astype(image.dtype))
+    return dst
 
+def customCannyEdgeFilter(image, size):
+    #make black and white outline
+    def sobelFilters(image):
+        xKernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+        yKernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
+        
+        xImage = convolve(image, 3, xKernel)
+        yImage = convolve(image, 3, yKernel)
+
+        G = np.hypot(xImage, yImage)
+        G = G/ G.max() * 255
+
+        return G
+
+    # Determine the avg of the current kernel
+    def sobelSquare(arr, kernel):
+        sum = 0
+        for i in range(kernel.shape[0]):
+            for j in range(kernel.shape[0]):
+                pp = arr[i][j][0]*kernel[i][j] #pixel product
+                sum += pp
+        return sum
+    
+    def convolve(image, size, kernel):
+        # Setup the Kernel, blur, and indicies
+        currSquare = []
+        currSquare_row = []
+
+        blur_row = []
+        blur = []
+
+        rows = len(image)
+        cols = len(image[0])
+
+        row, col = 0, 0
+
+        while row <= rows - size:
+            while col <= cols - size:
+
+                for i in range(row, row + size):
+
+                    for j in range(col, col + size):
+
+                        currSquare_row.append(image[i][j])
+
+                    currSquare.append(np.asarray(currSquare_row))
+                    currSquare_row = []
+
+                avg = sobelSquare(currSquare, kernel)
+                blur_row.append(np.asarray([avg, avg, avg]))
+                currSquare = []
+
+                col += 1
+            
+            blur.append(np.asarray(blur_row))
+            blur_row = []
+
+            row += 1
+            col = 0
+        
+        return np.asarray(blur)
+    
+    image = customGaussianFilter(image, 3)
+    image = sobelFilters(image)
+    image = customLaplaceFilter(image, 3)
+    return image
 
 
 # ----------------------------------- Driver Code ------------------------------------------------ #
@@ -276,7 +349,7 @@ Boxing = False
 Gausing = False
 Motion = False
 Laplace = False
-CannyE = False
+CannyE = True
 
 if Boxing:
     # Creating reference and custom 7x7 box blurs
@@ -316,8 +389,8 @@ if Laplace:
     
 if CannyE:
     # Creating reference and custom Edge Detectors
-    cvCannyEdge = cvCannyEdgeFilter(image)
-    customCannyEdge = customCannyEdgeFilter(image)
+    cvCannyEdge = cvCannyEdgeFilter(image, 15, 3)
+    customCannyEdge = customCannyEdgeFilter(image, 3)
     imageComparison(cvCannyEdge, "CV Canny Edge Filter", customCannyEdge, "Custom Canny Edge Filter")
     # Saving blured images into separate folders
     cv.imwrite('../CS4391.001 Assignment 1/OpenCV_Output/cvCannyEdge.jpg', cvCannyEdge)
